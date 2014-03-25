@@ -506,6 +506,21 @@ define(function (require, exports, module) {
         );
     }
     
+    function countAvailableUpdatesForExtensions() {
+        var result = 0;
+        Object.keys(extensions).forEach(function (extensionId) {
+            var extensionInfo = extensions[extensionId];
+            // skip extensions that are not installed or are not in the registry
+            if (!extensionInfo.installInfo || !extensionInfo.registryInfo) {
+                return;
+            }
+            if (extensionInfo.registryInfo.updateAvailable) {
+                result += 1;
+            }
+        });
+        return result;
+    }
+
     // Listen to extension load and loadFailed events
     $(ExtensionLoader)
         .on("load", _handleExtensionLoad)
@@ -529,6 +544,7 @@ define(function (require, exports, module) {
     exports.hasExtensionsToUpdate = hasExtensionsToUpdate;
     exports.removeMarkedExtensions = removeMarkedExtensions;
     exports.updateExtensions = updateExtensions;
+    exports.countAvailableUpdatesForExtensions = countAvailableUpdatesForExtensions;
     
     exports.ENABLED = ENABLED;
     exports.START_FAILED = START_FAILED;

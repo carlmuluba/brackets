@@ -33,6 +33,7 @@ define(function (require, exports, module) {
     
     var Dialogs              = require("widgets/Dialogs"),
         DefaultDialogs       = require("widgets/DefaultDialogs"),
+        ExtensionManager     = require("extensibility/ExtensionManager"),
         PreferencesManager   = require("preferences/PreferencesManager"),
         Global               = require("utils/Global"),
         NativeApp            = require("utils/NativeApp"),
@@ -211,6 +212,18 @@ define(function (require, exports, module) {
         $updateList.html(Mustache.render(UpdateListTemplate, updates));
     }
     
+    function checkForExtensionsUpdate() {
+        return ExtensionManager.downloadRegistry().done(function () {
+            var c = ExtensionManager.countAvailableUpdatesForExtensions();
+            if (c > 0) {
+                $("<span>")
+                    .addClass("notification")
+                    .text(c)
+                    .appendTo($("#toolbar-extension-manager"));
+            }
+        });
+    }
+
     /**
      * Check for updates. If "force" is true, update notification dialogs are always displayed
      * (if an update is available). If "force" is false, the update notification is only
@@ -325,7 +338,7 @@ define(function (require, exports, module) {
                 result.reject();
             });
         
-        return result.promise();
+        return $.when(result.promise(), checkForExtensionsUpdate());
     }
     
     // Append locale to version info URL
