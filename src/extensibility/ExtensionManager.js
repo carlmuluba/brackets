@@ -525,6 +525,23 @@ define(function (require, exports, module) {
         return result;
     }
 
+    function cleanAvailableUpdates(updates) {
+        return updates.reduce(function (arr, updateInfo) {
+            var extDefinition = extensions[updateInfo.id];
+            if (!extDefinition || !extDefinition.installInfo) {
+                // extension has been uninstalled in the meantime
+                return arr;
+            }
+
+            var installedVersion = extDefinition.installInfo.metadata.version;
+            if (semver.lt(installedVersion, updateInfo.registryVersion)) {
+                arr.push(updateInfo);
+            }
+
+            return arr;
+        }, []);
+    }
+
     // Listen to extension load and loadFailed events
     $(ExtensionLoader)
         .on("load", _handleExtensionLoad)
@@ -549,6 +566,7 @@ define(function (require, exports, module) {
     exports.removeMarkedExtensions = removeMarkedExtensions;
     exports.updateExtensions = updateExtensions;
     exports.getAvailableUpdates = getAvailableUpdates;
+    exports.cleanAvailableUpdates = cleanAvailableUpdates;
     
     exports.ENABLED = ENABLED;
     exports.START_FAILED = START_FAILED;

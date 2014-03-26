@@ -234,7 +234,7 @@ define(function (require, exports, module) {
             });
         } else {
             var availableUpdates = PreferencesManager.getViewState("extensionUpdateInfo");
-            // TODO: clear availableUpdates
+            availableUpdates = ExtensionManager.cleanAvailableUpdates(availableUpdates);
             deferred.resolve(availableUpdates);
         }
 
