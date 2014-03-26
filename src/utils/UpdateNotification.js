@@ -239,11 +239,7 @@ define(function (require, exports, module) {
         }
 
         deferred.done(function (availableUpdates) {
-            if (availableUpdates.length > 0) {
-                $("<span>")
-                    .addClass("notification")
-                    .appendTo($("#toolbar-extension-manager"));
-            }
+            $("#toolbar-extension-manager").toggleClass("updatesAvailable", availableUpdates.length > 0);
         });
     }
 
