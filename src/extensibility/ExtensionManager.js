@@ -506,8 +506,8 @@ define(function (require, exports, module) {
         );
     }
     
-    function countAvailableUpdatesForExtensions() {
-        var result = 0;
+    function getAvailableUpdates() {
+        var result = [];
         Object.keys(extensions).forEach(function (extensionId) {
             var extensionInfo = extensions[extensionId];
             // skip extensions that are not installed or are not in the registry
@@ -515,7 +515,11 @@ define(function (require, exports, module) {
                 return;
             }
             if (extensionInfo.registryInfo.updateAvailable) {
-                result += 1;
+                result.push({
+                    id: extensionId,
+                    installVersion: extensionInfo.installInfo.metadata.version,
+                    registryVersion: extensionInfo.registryInfo.metadata.version
+                });
             }
         });
         return result;
@@ -544,7 +548,7 @@ define(function (require, exports, module) {
     exports.hasExtensionsToUpdate = hasExtensionsToUpdate;
     exports.removeMarkedExtensions = removeMarkedExtensions;
     exports.updateExtensions = updateExtensions;
-    exports.countAvailableUpdatesForExtensions = countAvailableUpdatesForExtensions;
+    exports.getAvailableUpdates = getAvailableUpdates;
     
     exports.ENABLED = ENABLED;
     exports.START_FAILED = START_FAILED;

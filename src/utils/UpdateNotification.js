@@ -47,11 +47,17 @@ define(function (require, exports, module) {
     
     // Init default last build number
     PreferencesManager.stateManager.definePreference("lastNotifiedBuildNumber", "number", 0);
+    // Time of last registry check for update
+    PreferencesManager.stateManager.definePreference("lastExtensionRegistryCheckTime", "number", 0);
+    // Data about available updates in the registry
+    PreferencesManager.stateManager.definePreference("extensionUpdateInfo", "array", []);
 
     PreferencesManager.convertPreferences(module, {
         "lastNotifiedBuildNumber": "user",
         "lastInfoURLFetchTime": "user",
-        "updateInfo": "user"
+        "updateInfo": "user",
+        "lastExtensionRegistryCheckTime": "user",
+        "extensionUpdateInfo": "user"
     }, true);
     
     // This is the last version we notified the user about. If checkForUpdate()
@@ -213,15 +219,43 @@ define(function (require, exports, module) {
     }
     
     function checkForExtensionsUpdate() {
-        return ExtensionManager.downloadRegistry().done(function () {
-            var c = ExtensionManager.countAvailableUpdatesForExtensions();
-            if (c > 0) {
+        var lastCheck = PreferencesManager.getViewState("lastExtensionRegistryCheckTime"),
+            currentTime = (new Date()).getTime(),
+            oneDay = 86400000,
+            deferred = new $.Deferred();
+
+        if (lastCheck + oneDay < currentTime) {
+            // downloadRegistry
+            ExtensionManager.downloadRegistry().done(function () {
+                var availableUpdates = ExtensionManager.getAvailableUpdates();
+                PreferencesManager.setViewState("extensionUpdateInfo", availableUpdates);
+                PreferencesManager.setViewState("lastExtensionRegistryCheckTime", currentTime);
+                deferred.resolve(availableUpdates);
+            });
+        } else {
+            var availableUpdates = PreferencesManager.getViewState("extensionUpdateInfo");
+            // TODO: clear availableUpdates
+            deferred.resolve(availableUpdates);
+        }
+
+        deferred.done(function (availableUpdates) {
+            if (availableUpdates.length > 0) {
                 $("<span>")
                     .addClass("notification")
-                    .text(c)
                     .appendTo($("#toolbar-extension-manager"));
             }
         });
+    }
+
+    function _automaticUpdate() {
+        return $.when(checkForUpdate(), checkForExtensionsUpdate());
+    }
+
+    function launchAutomaticUpdate() {
+        var INTERVAL = 86520000; // repeat once a day, plus 2 minutes
+        // as the check will skip if the last check was not -24h ago
+        window.setInterval(_automaticUpdate, INTERVAL);
+        _automaticUpdate();
     }
 
     /**
@@ -338,12 +372,13 @@ define(function (require, exports, module) {
                 result.reject();
             });
         
-        return $.when(result.promise(), checkForExtensionsUpdate());
+        return result.promise();
     }
     
     // Append locale to version info URL
     _versionInfoURL = brackets.config.update_info_url + brackets.getLocale() + ".json";
 
     // Define public API
-    exports.checkForUpdate = checkForUpdate;
+    exports.launchAutomaticUpdate = launchAutomaticUpdate;
+    exports.checkForUpdate        = checkForUpdate;
 });
