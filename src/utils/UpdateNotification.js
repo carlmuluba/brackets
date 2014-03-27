@@ -243,21 +243,25 @@ define(function (require, exports, module) {
     }
 
     function _automaticUpdate() {
-        return $.when(checkForUpdate(), checkForExtensionsUpdate());
-    }
+        // this handles updating the Brackets itself
+        checkForUpdate();
 
-    function launchAutomaticUpdate() {
-        // this is undefined when called immediately from brackets.js
-        _lastInfoURLFetchTime = PreferencesManager.getViewState("lastInfoURLFetchTime");
-
-        var timeOfNextCheck = _lastInfoURLFetchTime + ONE_DAY,
+        // this handles updating the extensions installed
+        var lastExtensionRegistryCheckTime = PreferencesManager.getViewState("lastExtensionRegistryCheckTime");
+        var timeOfNextCheck = lastExtensionRegistryCheckTime + ONE_DAY,
             currentTime = (new Date()).getTime();
 
         if (currentTime > timeOfNextCheck) {
-            _automaticUpdate();
+            checkForExtensionsUpdate();
         } else {
-            setTimeout(launchAutomaticUpdate, (timeOfNextCheck - currentTime) + 1000);
+            setTimeout(_automaticUpdate, (timeOfNextCheck - currentTime) + 1000);
         }
+    }
+
+    function launchAutomaticUpdate() {
+        // launch immediately and then every 24 hours + 2 minutes
+        _automaticUpdate();
+        window.setInterval(_automaticUpdate, ONE_DAY + (2 * 60 * 1000));
     }
 
     /**
