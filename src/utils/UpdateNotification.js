@@ -42,6 +42,8 @@ define(function (require, exports, module) {
         UpdateDialogTemplate = require("text!htmlContent/update-dialog.html"),
         UpdateListTemplate   = require("text!htmlContent/update-list.html");
     
+    var ONE_DAY = 1000 * 60 * 60 * 24;
+
     // Extract current build number from package.json version field 0.0.0-0
     var _buildNumber = Number(/-([0-9]+)/.exec(brackets.metadata.version)[1]);
     
@@ -122,7 +124,7 @@ define(function (require, exports, module) {
         }
         
         // If more than 24 hours have passed since our last fetch, fetch again
-        if ((new Date()).getTime() > _lastInfoURLFetchTime + (1000 * 60 * 60 * 24)) {
+        if ((new Date()).getTime() > _lastInfoURLFetchTime + ONE_DAY) {
             fetchData = true;
         }
         
@@ -221,10 +223,9 @@ define(function (require, exports, module) {
     function checkForExtensionsUpdate() {
         var lastCheck = PreferencesManager.getViewState("lastExtensionRegistryCheckTime"),
             currentTime = (new Date()).getTime(),
-            oneDay = 86400000,
             deferred = new $.Deferred();
 
-        if (lastCheck + oneDay < currentTime) {
+        if (currentTime > lastCheck + ONE_DAY) {
             // downloadRegistry
             ExtensionManager.downloadRegistry().done(function () {
                 var availableUpdates = ExtensionManager.getAvailableUpdates();
@@ -248,10 +249,17 @@ define(function (require, exports, module) {
     }
 
     function launchAutomaticUpdate() {
-        var INTERVAL = 86520000; // repeat once a day, plus 2 minutes
-        // as the check will skip if the last check was not -24h ago
-        window.setInterval(_automaticUpdate, INTERVAL);
-        _automaticUpdate();
+        // this is undefined when called immediately from brackets.js
+        _lastInfoURLFetchTime = PreferencesManager.getViewState("lastInfoURLFetchTime");
+
+        var timeOfNextCheck = _lastInfoURLFetchTime + ONE_DAY,
+            currentTime = (new Date()).getTime();
+
+        if (currentTime > timeOfNextCheck) {
+            _automaticUpdate();
+        } else {
+            setTimeout(launchAutomaticUpdate, (timeOfNextCheck - currentTime) + 1000);
+        }
     }
 
     /**
