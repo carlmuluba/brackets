@@ -39,7 +39,8 @@
 define(function (require, exports, module) {
     "use strict";
     
-    var FileUtils        = require("file/FileUtils"),
+    var _                = require("thirdparty/lodash"),
+        FileUtils        = require("file/FileUtils"),
         Package          = require("extensibility/Package"),
         Async            = require("utils/Async"),
         ExtensionLoader  = require("utils/ExtensionLoader"),
@@ -105,13 +106,28 @@ define(function (require, exports, module) {
         }
         
         entry.installInfo.owner = entry.registryInfo.owner;
-        if (entry.installInfo.metadata && entry.installInfo.metadata.version && semver.lt(entry.installInfo.metadata.version, entry.registryInfo.metadata.version)) {
+
+        // Assume false
+        entry.installInfo.updateAvailable = false;
+        entry.registryInfo.updateAvailable = false;
+        entry.installInfo.updateCompatible = false;
+        entry.registryInfo.updateCompatible = false;
+
+        var currentVersion = entry.installInfo.metadata ? entry.installInfo.metadata.version : null;
+        if (currentVersion && semver.lt(currentVersion, entry.registryInfo.metadata.version)) {
             // Note: available update may still be incompatible; we check for this when rendering the Update button in ExtensionManagerView._renderItem()
             entry.registryInfo.updateAvailable = true;
             entry.installInfo.updateAvailable = true;
-        } else {
-            entry.installInfo.updateAvailable = false;
-            entry.registryInfo.updateAvailable = false;
+            // Calculate updateCompatible to check if there's an update for current version of Brackets
+            var lastCompatibleVersionInfo = _.findLast(entry.registryInfo.versions, function (versionInfo) {
+                return semver.satisfies(brackets.metadata.apiVersion, versionInfo.brackets);
+            });
+            if (lastCompatibleVersionInfo && lastCompatibleVersionInfo.version && semver.lt(currentVersion, lastCompatibleVersionInfo.version)) {
+                entry.installInfo.updateCompatible = true;
+                entry.registryInfo.updateCompatible = true;
+                entry.registryInfo.lastCompatibleVersion = lastCompatibleVersionInfo.version;
+                entry.registryInfo.lastCompatibleVersion = lastCompatibleVersionInfo.version;
+            }
         }
 
         $(exports).triggerHandler("registryUpdate", [id]);
@@ -514,11 +530,11 @@ define(function (require, exports, module) {
             if (!extensionInfo.installInfo || !extensionInfo.registryInfo) {
                 return;
             }
-            if (extensionInfo.registryInfo.updateAvailable) {
+            if (extensionInfo.registryInfo.updateCompatible) {
                 result.push({
                     id: extensionId,
                     installVersion: extensionInfo.installInfo.metadata.version,
-                    registryVersion: extensionInfo.registryInfo.metadata.version
+                    registryVersion: extensionInfo.registryInfo.lastCompatibleVersion
                 });
             }
         });
