@@ -176,6 +176,7 @@ define(function (require, exports, module) {
                     extensions[id].registryInfo = data[id];
                     synchronizeEntry(id);
                 });
+                $(exports).triggerHandler("registryDownload");
                 result.resolve();
             })
             .fail(function () {

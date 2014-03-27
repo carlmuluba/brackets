@@ -220,28 +220,26 @@ define(function (require, exports, module) {
         $updateList.html(Mustache.render(UpdateListTemplate, updates));
     }
     
+    function _onRegistryDownloaded() {
+        var availableUpdates = ExtensionManager.getAvailableUpdates();
+        PreferencesManager.setViewState("extensionUpdateInfo", availableUpdates);
+        PreferencesManager.setViewState("lastExtensionRegistryCheckTime", (new Date()).getTime());
+        $("#toolbar-extension-manager").toggleClass("updatesAvailable", availableUpdates.length > 0);
+    }
+    $(ExtensionManager).on("registryDownload", _onRegistryDownloaded);
+
     function checkForExtensionsUpdate() {
         var lastCheck = PreferencesManager.getViewState("lastExtensionRegistryCheckTime"),
-            currentTime = (new Date()).getTime(),
-            deferred = new $.Deferred();
+            currentTime = (new Date()).getTime();
 
         if (currentTime > lastCheck + ONE_DAY) {
-            // downloadRegistry
-            ExtensionManager.downloadRegistry().done(function () {
-                var availableUpdates = ExtensionManager.getAvailableUpdates();
-                PreferencesManager.setViewState("extensionUpdateInfo", availableUpdates);
-                PreferencesManager.setViewState("lastExtensionRegistryCheckTime", currentTime);
-                deferred.resolve(availableUpdates);
-            });
+            // downloadRegistry, will be resolved in _onRegistryDownloaded
+            ExtensionManager.downloadRegistry();
         } else {
             var availableUpdates = PreferencesManager.getViewState("extensionUpdateInfo");
             availableUpdates = ExtensionManager.cleanAvailableUpdates(availableUpdates);
-            deferred.resolve(availableUpdates);
-        }
-
-        deferred.done(function (availableUpdates) {
             $("#toolbar-extension-manager").toggleClass("updatesAvailable", availableUpdates.length > 0);
-        });
+        }
     }
 
     function _automaticUpdate() {
